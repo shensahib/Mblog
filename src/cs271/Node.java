@@ -596,13 +596,14 @@ public class Node {
             expireTime = System.currentTimeMillis() + proposeTimeout;
             while(alive) {
                 if(expireTime < System.currentTimeMillis()) {
-                    if (numAcceptances.get(proposal.getPosition())<= cluster.size()/2)){
+                    if (!numAcceptances.containsKey(proposal.getPosition())||numAcceptances.get(proposal.getPosition())<= cluster.size()/2){
                         server.sendToClient("Timeout, not accepted!");
                     }
                     suicide();
-                }
 
                 }
+
+
                 yield(); // so the while loop doesn't spin too much
             }
         }
