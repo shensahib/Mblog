@@ -24,11 +24,11 @@ public class Client {
     private ObjectInputStream in;
     private ObjectOutputStream out;
 
-    public Client(int port){
+    public Client(String host){
 
         // Make connection and initialize streams
         try {
-            socket = new Socket(InetAddress.getLocalHost(), port);
+            socket = new Socket(host, 9900);
         } catch (IOException e) {
             log("Exception connecting to server!");
         }
@@ -136,7 +136,7 @@ public class Client {
     }
 
     public static void main(String[] args) throws IOException {
-        Client client = new Client(Integer.parseInt(args[0]));
+        Client client = new Client(args[0]);
         client.instruct();
         client.run();
     }
