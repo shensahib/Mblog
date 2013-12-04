@@ -418,7 +418,6 @@ public class Node {
             Proposal requestedProposal = acceptRequest.getProposal();
             int position = requestedProposal.getPosition();
             int ballotNumber = requestedProposal.getBallotNumber();
-            writeDebug("Got Accept Request from Proposer: position: "+position+"bal num"+ballotNumber);
             writeDebug("Got Accept Request from Proposer: " + acceptRequest.getSender().getNodeId() + ", proposal: " + requestedProposal.toString());
 
             if (mode == basic){
@@ -430,8 +429,6 @@ public class Node {
                 if(ballotNumber < receivedMaxBallotNumber.get(position))
                     return;
 
-                // otherwise "accept" the proposal, here one acceptor might update its max ballot number with some number raised by other acceptors
-                //                    receivedMaxBallotNumber.put(position, ballotNumber);
                 acceptedProposals.put(position, requestedProposal);
                 Tweets.put(requestedProposal.getPosition(), requestedProposal.getValue());
             }
@@ -446,12 +443,20 @@ public class Node {
             // Broadcast decision to all
             AcceptConfirmMessage acceptConfirmMessage = new AcceptConfirmMessage(position, requestedProposal);
             acceptConfirmMessage.setSender(nodeInformation);
-            //broadcast(acceptConfirmMessage);
-            unicast(m.getSender(),acceptConfirmMessage);
-            writeDebug("Sent Accept Confirm to " + m.getSender() + ": " + (requestedProposal == null ? "None" : requestedProposal.toString()));
+
+            if (mode == basic){
+                //unicast(acceptConfirmMessage);
+                unicast(m.getSender(),acceptConfirmMessage);
+                writeDebug("Sent Accept Confirm to " + m.getSender() + ": " + (requestedProposal == null ? "None" : requestedProposal.toString()));
+            }
+            else {
+                //broadcast
+                broadcast(acceptConfirmMessage);
+                writeDebug("Sent Accept Confirm to all" + ": " + (requestedProposal == null ? "None" : requestedProposal.toString()));
+            }
         }
 
-        // Proposers learn the decision
+        // Proposers  & learners learn the decision
         else if(m instanceof AcceptConfirmMessage) {
             AcceptConfirmMessage acceptConfirmMessage = (AcceptConfirmMessage)m;
             Proposal acceptedProposal = acceptConfirmMessage.getProposal();
@@ -480,9 +485,7 @@ public class Node {
                 return;
             }
 
-            log("before " + Integer.toString(n));
             n++;
-            log("after " + Integer.toString(n));
 
             // if recently learned from a quorum
             if(n > (cluster.size() / 2)) {
@@ -501,10 +504,6 @@ public class Node {
                 }
             }
             acceptanceList.put(position, n);
-
-            log("finally " + Integer.toString(n));
-            log("finally " + acceptanceList.get(position));
-            log("finally " + numAcceptances.get(position));
         }
         else
             writeDebug("Unknown Message received", true);
@@ -596,15 +595,20 @@ public class Node {
             expireTime = System.currentTimeMillis() + proposeTimeout;
             while(alive) {
                 if(expireTime < System.currentTimeMillis()) {
-                    if (!numAcceptances.containsKey(proposal.getPosition())||numAcceptances.get(proposal.getPosition())<= cluster.size()/2){
-                        server.sendToClient("Timeout, not accepted!");
+                    if (mode==basic){
+                        if (!numAcceptances.containsKey(proposal.getPosition())||numAcceptances.get(proposal.getPosition())<= cluster.size()/2){
+                            server.sendToClient("Timeout, not accepted!");
+                        }
+                    }
+                    else{
+                        if (!numIsolatedAcceptances.get(nodeInformation.getNodeId()).containsKey(proposal.getPosition())
+                                ||numIsolatedAcceptances.get(nodeInformation.getNodeId()).get(proposal.getPosition())<=cluster.size()/2){
+                            server.sendToClient("Timeout, not accepted!");
+                        }
                     }
                     suicide();
-
                 }
-
-
-                yield(); // so the while loop doesn't spin too much
+                yield();
             }
         }
 
