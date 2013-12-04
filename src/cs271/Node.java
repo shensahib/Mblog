@@ -256,7 +256,6 @@ public class Node {
         try
         {
             socket = new Socket(node.getHost(), node.getPort());
-            log("socket connected!");
             socket.setSoTimeout(socketTimeout);
             out = new ObjectOutputStream(socket.getOutputStream());
             out.writeObject(m);
@@ -372,14 +371,12 @@ public class Node {
 
             // if acceptor already promised something equal or higher, use higher ballot number
             if(!promised) {
+                log("Acceptor refused!");
                 /*int tmpBallotNumber = currentProposedBallotNumbers.get(position);
                 while(tmpBallotNumber < ballotNumber)
                     tmpBallotNumber += cluster.size();
                 currentProposedBallotNumbers.put(position, tmpBallotNumber);*/
-                log( "ought to be REPROPOSED!");
-                /*propose(proposal.getValue(), proposal.getPosition());
-                log( "REPROPOSED!");*/
-
+                /*propose(proposal.getValue(), proposal.getPosition());*/
                 return;
             }
 
@@ -395,7 +392,6 @@ public class Node {
                     proposal.setValue(acceptedProposal.getValue());
                     maxAcceptedProposalBallotNumber.put(position, proposal.getBallotNumber());
                     writeDebug("maxAcceptedProposalBallotNumber: "+maxAcceptedProposalBallotNumber.get(position));
-                    writeDebug("proposals.get(position) Balnum: "+ proposals.get(position).getBallotNumber()+"Value"+proposals.get(position).getValue());
                 }
             }
 
@@ -404,7 +400,7 @@ public class Node {
                 AcceptRequestMessage acceptRequest = new AcceptRequestMessage(position, proposal);
                 acceptRequest.setSender(nodeInformation);
                 broadcast(acceptRequest);
-                writeDebug("Sent Accept Request to Proposers: " + ", proposal: " + proposal.toString());
+                writeDebug("Sent Accept Request to Acceptors, " + "proposal: " + proposal.toString());
             }
 
             // record the new counter
